@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Siemens Style Architecture</title>
+<style>
+/* Siemens Style, technical layer ("HUD"). Use for architecture, data-flow and platform diagrams.
+   Colours come from the Siemens Style tokens; nothing here introduces a new hue. */
+:root{
+  --hud-bg:#010E13;                    /* teal-black stage floor */
+  --hud-bg-2:#02171E;                  /* stage glow centre */
+  --hud-panel:rgba(255,255,255,.035);  /* glass panel fill */
+  --hud-edge:rgba(160,210,225,.16);    /* idle graph edge */
+  --hud-line:rgba(0,215,160,.28);      /* teal hairline */
+  --hud-glow:0 0 18px rgba(0,215,160,.40);
+  --hud-mint:#00D7A0;                  /* Data Turquoise 400: live signal, active edge */
+  --hud-ot:#00BEDC;                    /* Data Blue 500 */
+  --hud-it:#0087BE;                    /* Data Blue 700 */
+  --hud-et:#A68DFF;                    /* Data Purple 400: existing / external systems */
+  --hud-flag:#FFBC66;                  /* Data Orange 200: open item, future scope */
+  --hud-mono:'Courier New',ui-monospace,monospace;
+}
+
+/* Stage: tilted holographic floor with inner glow */
+.hud-stage{position:relative;overflow:hidden;border-radius:12px;perspective:1500px;perspective-origin:50% 34%;
+  background:radial-gradient(ellipse at 50% 40%,rgba(0,215,160,.10),transparent 60%),linear-gradient(var(--hud-bg-2),var(--hud-bg));
+  box-shadow:inset 0 0 40px rgba(0,215,160,.08),inset 0 0 0 1px rgba(0,215,160,.15)}
+.hud-tilt{position:absolute;inset:0;transform-style:preserve-3d;transform:rotateX(9deg);transition:transform .35s cubic-bezier(.22,1,.36,1)}
+
+/* Scanlines with a slow sweeping band */
+.hud-scan{position:absolute;inset:0;pointer-events:none;mix-blend-mode:screen;opacity:.55;overflow:hidden;
+  background:repeating-linear-gradient(0deg,rgba(0,215,160,.045) 0 1px,transparent 1px 4px)}
+.hud-scan::after{content:"";position:absolute;left:0;right:0;height:70px;top:-80px;
+  background:linear-gradient(rgba(0,215,160,0),rgba(0,215,160,.14),rgba(0,215,160,0));animation:hud-sweep 6s linear infinite}
+@keyframes hud-sweep{to{transform:translateY(120vh)}}
+
+/* Corner brackets */
+.hud-frame{position:absolute;inset:7px;pointer-events:none}
+.hud-frame i{position:absolute;width:15px;height:15px;border:1.5px solid rgba(0,215,160,.6)}
+.hud-frame .tl{top:0;left:0;border-right:0;border-bottom:0}.hud-frame .tr{top:0;right:0;border-left:0;border-bottom:0}
+.hud-frame .bl{bottom:0;left:0;border-right:0;border-top:0}.hud-frame .br{bottom:0;right:0;border-left:0;border-top:0}
+
+/* Mono readouts and live dot */
+.hud-readout{position:absolute;z-index:3;font-family:var(--hud-mono);font-size:11px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--hud-mint);background:rgba(0,25,25,.4);border:1px solid rgba(0,215,160,.28);border-radius:4px;padding:3px 8px;pointer-events:none}
+.hud-readout b{color:#fff}
+.hud-live{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--hud-mint);margin-right:6px;vertical-align:middle;
+  box-shadow:0 0 7px var(--hud-mint);animation:hud-pulse 1.6s ease-in-out infinite}
+@keyframes hud-pulse{50%{opacity:.25}}
+
+/* Graph: nodes, edges, flowing dashes */
+.hud-svg{position:absolute;inset:2px 8px 16px;width:calc(100% - 16px);height:calc(100% - 18px);overflow:visible}
+.hud-edge{fill:none;stroke:var(--hud-edge);stroke-width:1.2;transition:stroke .2s,stroke-width .2s,opacity .25s}
+.hud-flow{fill:none;stroke:var(--hud-mint);stroke-width:1.8;stroke-dasharray:5 9;stroke-linecap:round;animation:hud-dash 1.2s linear infinite;
+  filter:drop-shadow(0 0 3px var(--hud-mint));transition:opacity .25s}
+@keyframes hud-dash{to{stroke-dashoffset:-28}}
+.hud-node{cursor:crosshair;transition:opacity .25s}
+.hud-node rect.body{fill:rgba(2,20,26,.92);stroke:var(--c,var(--hud-mint));stroke-width:1.2;transition:filter .2s,stroke-width .2s}
+.hud-node:hover rect.body,.hud-node.hot rect.body{stroke-width:2;filter:drop-shadow(0 0 8px var(--c,var(--hud-mint)))}
+.hud-nt{fill:#fff;font:700 13px var(--hud-mono);letter-spacing:.03em}
+.hud-nt.sub{fill:rgba(255,255,255,.48);font-weight:400;font-size:9.5px}
+.hud-dim .hud-node:not(.on),.hud-dim .hud-flow:not(.on){opacity:.2}
+
+/* Glass panel and colour-coded source card */
+.hud-panel{border:1px solid var(--hud-line);border-radius:9px;background:var(--hud-panel);padding:14px 16px;transition:background .15s,box-shadow .15s,transform .15s}
+.hud-panel:hover{background:rgba(0,215,160,.08);box-shadow:0 8px 20px rgba(0,215,160,.22);transform:translateY(-2px)}
+.hud-src{border:1px solid rgba(255,255,255,.14);border-left:4px solid var(--c,var(--hud-mint));border-radius:9px;background:var(--hud-panel);padding:14px 16px;cursor:pointer;transition:background .15s,box-shadow .15s,transform .15s}
+.hud-src:hover,.hud-src.on{background:rgba(255,255,255,.085);box-shadow:0 0 0 1px var(--c,var(--hud-mint)) inset,0 10px 26px rgba(0,0,0,.3);transform:translateX(3px)}
+.hud-tag{display:inline-block;font-size:11px;font-weight:700;color:var(--c,var(--hud-mint));border:1px solid var(--c,var(--hud-mint));border-radius:10px;padding:2px 8px;letter-spacing:.03em}
+
+/* Callout */
+.hud-callout{position:absolute;z-index:6;pointer-events:none;font-family:var(--hud-mono);font-size:11px;color:#fff;line-height:1.4;text-align:center;white-space:nowrap;
+  background:rgba(2,20,26,.92);border:1px solid var(--hud-mint);border-radius:5px;padding:5px 10px;box-shadow:var(--hud-glow)}
+.hud-callout b{display:block;color:var(--hud-mint);letter-spacing:.04em}
+
+@media (prefers-reduced-motion:reduce){.hud-scan::after,.hud-flow,.hud-live{animation:none}.hud-tilt{transition:none}}
+
+:root{--bg:#000028;--ink:#fff;--soft:rgba(255,255,255,.74);--faint:rgba(255,255,255,.48);--accent:#00C1B6;--fs:clamp(13px,1.1vw,18px);--fs-s:clamp(11px,.9vw,14px)}
+*{box-sizing:border-box;scrollbar-width:none}*::-webkit-scrollbar{display:none}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif}
+h2,h3,h4,p{margin:0}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;padding:5vh 5vw 4vh;gap:2vh;background:radial-gradient(circle at 85% 10%,rgba(0,193,182,.14),transparent 40%),var(--bg)}
+.eyebrow{font-size:var(--fs-s);font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+h2{font-size:clamp(24px,2.8vw,44px);line-height:1.1}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.r{animation:rise .6s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--i,0)*80ms)}
+.main{flex:1;min-height:0;display:grid;grid-template-columns:clamp(220px,22vw,340px) 1fr;gap:1.4vw}
+.layers{display:flex;flex-direction:column;gap:1vh;min-height:0}
+.layer{flex:1;min-height:0;border:1px solid rgba(255,255,255,.14);border-left:4px solid rgba(255,255,255,.28);border-radius:9px;background:var(--hud-panel);padding:1.6vh 1.2vw;display:flex;flex-direction:column;justify-content:center;gap:.7vh;cursor:pointer;transition:background .18s,border-color .18s,transform .18s,box-shadow .18s}
+.layer:hover{transform:translateX(4px);background:rgba(255,255,255,.07)}
+.layer.on{border-left-color:var(--hud-mint);box-shadow:0 0 0 1px rgba(0,215,160,.5) inset,0 0 24px rgba(0,215,160,.18);background:rgba(0,215,160,.08)}
+.layer small{font:700 var(--fs-s) var(--hud-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--hud-mint)}
+.layer h3{font-size:calc(var(--fs)*1.2)}
+.layer p{font-size:var(--fs-s);line-height:1.5;color:var(--soft)}
+.stage{min-height:0}
+.hud-stage{height:100%}
+.hud-callout{display:none}
+.foot3{display:flex;gap:3vw;border-top:1px solid rgba(255,255,255,.28);padding-top:1.4vh;font-size:calc(var(--fs)*1.05);font-weight:700}
+.foot3 span{display:flex;align-items:center;gap:8px}
+.foot3 i{width:8px;height:8px;border-radius:50%;background:var(--hud-mint);box-shadow:0 0 8px var(--hud-mint)}
+@media (prefers-reduced-motion:reduce){.r{animation:none}}
+</style>
+</head>
+<body>
+<section class="slide">
+  <p class="eyebrow r" style="--i:0">Open ecosystem</p>
+  <h2 class="r" style="--i:1">One platform to build it, without lock-in</h2>
+  <div class="main r" style="--i:2">
+    <div class="layers" id="layers">
+      <div class="layer on"><small>Layer 1</small><h3>Connectivity</h3><p>Data comes in from OT, IT and ET, over open protocols.</p></div>
+      <div class="layer"><small>Layer 2</small><h3>Data fabric</h3><p>Everything linked in one governed knowledge graph.</p></div>
+      <div class="layer"><small>Layer 3</small><h3>Agentic AI</h3><p>Agents orchestrated together, with people in the loop.</p></div>
+    </div>
+    <div class="stage">
+      <div class="hud-stage" id="stage">
+        <div class="hud-tilt">
+          <svg class="hud-svg" viewBox="0 0 800 440" preserveAspectRatio="xMidYMid meet" id="g" aria-label="OT, IT and ET sources flow through the connectivity layer into one unified data stream">
+            <defs>
+              <path id="pOT" d="M220 100 C310 100 310 220 400 220"/>
+              <path id="pIT" d="M220 220 L400 220"/>
+              <path id="pET" d="M220 340 C310 340 310 220 400 220"/>
+              <path id="pOUT" d="M540 220 L630 220"/>
+            </defs>
+            <!-- idle edges -->
+            <use href="#pOT" class="hud-edge"/><use href="#pIT" class="hud-edge"/><use href="#pET" class="hud-edge"/><use href="#pOUT" class="hud-edge"/>
+            <!-- flows -->
+            <use href="#pOT" class="hud-flow f-ot on" style="stroke:var(--hud-ot);filter:drop-shadow(0 0 3px var(--hud-ot))"/>
+            <use href="#pIT" class="hud-flow f-it on" style="stroke:var(--hud-it);filter:drop-shadow(0 0 3px var(--hud-it))"/>
+            <use href="#pET" class="hud-flow f-et on" style="stroke:var(--hud-et);filter:drop-shadow(0 0 3px var(--hud-et))"/>
+            <use href="#pOUT" class="hud-flow f-out on"/>
+            <!-- packets -->
+            <circle r="3.5" fill="#00BEDC"><animateMotion dur="2.6s" repeatCount="indefinite"><mpath href="#pOT"/></animateMotion></circle>
+            <circle r="3.5" fill="#0087BE"><animateMotion dur="2.2s" begin=".6s" repeatCount="indefinite"><mpath href="#pIT"/></animateMotion></circle>
+            <circle r="3.5" fill="#A68DFF"><animateMotion dur="2.6s" begin="1.2s" repeatCount="indefinite"><mpath href="#pET"/></animateMotion></circle>
+            <circle r="4" fill="#00D7A0"><animateMotion dur="1.4s" repeatCount="indefinite"><mpath href="#pOUT"/></animateMotion></circle>
+            <!-- sources -->
+            <g class="hud-node s-ot on" data-s="ot" style="--c:var(--hud-ot)"><rect class="body" x="40" y="60" width="180" height="80" rx="6"/><text class="hud-nt" x="58" y="92">OT</text><text class="hud-nt sub" x="58" y="112">PLCs, drives, robots</text><text class="hud-nt sub" x="58" y="128">Any vendor</text></g>
+            <g class="hud-node s-it on" data-s="it" style="--c:var(--hud-it)"><rect class="body" x="40" y="180" width="180" height="80" rx="6"/><text class="hud-nt" x="58" y="212">IT</text><text class="hud-nt sub" x="58" y="232">ERP, MES, CMMS</text><text class="hud-nt sub" x="58" y="248">Enterprise systems</text></g>
+            <g class="hud-node s-et on" data-s="et" style="--c:var(--hud-et)"><rect class="body" x="40" y="300" width="180" height="80" rx="6"/><text class="hud-nt" x="58" y="332">ET</text><text class="hud-nt sub" x="58" y="352">Engineering, PLM</text><text class="hud-nt sub" x="58" y="368">Design, lifecycle data</text></g>
+            <!-- protocols -->
+            <text class="hud-nt sub" x="250" y="76">OPC UA · PROFINET</text><text class="hud-nt sub" x="250" y="92">EtherNet/IP · Modbus TCP</text>
+            <!-- connectivity layer -->
+            <g class="hud-node on" style="--c:var(--hud-mint)">
+              <rect x="388" y="150" width="164" height="140" rx="8" fill="none" stroke="var(--hud-mint)" stroke-opacity=".35" stroke-dasharray="3 5"><animate attributeName="stroke-opacity" values=".15;.6;.15" dur="2.4s" repeatCount="indefinite"/></rect>
+              <rect class="body" x="400" y="162" width="140" height="116" rx="6" style="fill:rgba(0,215,160,.12)"/>
+              <text class="hud-nt" x="470" y="210" text-anchor="middle" style="font-size:15px">Connectivity</text>
+              <text class="hud-nt" x="470" y="230" text-anchor="middle" style="font-size:15px">layer</text>
+              <text class="hud-nt sub" x="470" y="256" text-anchor="middle">AI near the machine</text>
+            </g>
+            <!-- output -->
+            <g class="hud-node on" style="--c:var(--hud-mint)"><rect class="body" x="630" y="170" width="150" height="100" rx="6"/><text class="hud-nt" x="705" y="212" text-anchor="middle" style="font-size:15px">One unified</text><text class="hud-nt" x="705" y="232" text-anchor="middle" style="font-size:15px">data stream</text><text class="hud-nt sub" x="705" y="254" text-anchor="middle">ready for data fabric</text></g>
+          </svg>
+        </div>
+        <div class="hud-scan"></div>
+        <div class="hud-frame"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
+        <div class="hud-readout" style="top:14px;left:16px"><span class="hud-live"></span>Live · <b>3</b> sources</div>
+        <div class="hud-readout" style="bottom:14px;left:16px">Open protocols · <b>any vendor</b></div>
+        <div class="hud-readout" style="top:14px;right:16px">Layer <b>01</b> / 03</div>
+      </div>
+    </div>
+  </div>
+  <div class="foot3 r" style="--i:3"><span><i></i>Any vendor, any protocol</span><span><i></i>Works with what you own</span><span><i></i>One governed platform</span></div>
+</section>
+<script>
+(function(){
+  var g=document.getElementById('g'), nodes=g.querySelectorAll('.hud-node[data-s]');
+  function hl(k){g.classList.toggle('hud-dim',!!k);g.querySelectorAll('.hud-node,.hud-flow').forEach(function(e){e.classList.remove('on')});
+    if(!k){g.querySelectorAll('.hud-node,.hud-flow').forEach(function(e){e.classList.add('on')});return}
+    g.querySelectorAll('.s-'+k+',.f-'+k+',.f-out').forEach(function(e){e.classList.add('on')});
+    g.querySelectorAll('.hud-node:not([data-s])').forEach(function(e){e.classList.add('on')})}
+  nodes.forEach(function(n){n.addEventListener('mouseenter',function(){hl(n.dataset.s)});n.addEventListener('mouseleave',function(){hl(null)})});
+  var ls=document.querySelectorAll('.layer');ls.forEach(function(l){l.addEventListener('click',function(){ls.forEach(function(x){x.classList.toggle('on',x===l)})})});
+})();
+</script>
+</body>
+</html>

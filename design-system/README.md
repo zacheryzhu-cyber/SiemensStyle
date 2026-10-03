@@ -30,3 +30,20 @@ Reference build: `design-system/deck/siemens-style-deck.html` (single self-conta
 - **Navigation.** Arrow keys, Page Up and Down, space, Home and End. A 3 px progress rail on top in `accent`, a `01 / 11` counter and Prev and Next buttons at the bottom.
 - **Reduced motion.** Turn off transitions and animations under `prefers-reduced-motion: reduce`.
 - **Colour.** Dark first: `surface-100` background, `ink` text, `accent` for eyebrows and highlights. Take every colour from the tokens.
+
+## Technical diagrams (HUD layer)
+
+Use this layer for architecture, data-flow and platform slides. The base system is flat and ruled; diagrams need depth and signal. Stylesheet: `design-system/hud.css`. Reference build: `design-system/deck/architecture-demo.html`.
+
+Why plain cards look flat: thick borders, one fill colour, no depth, no flow. Fix it with these recipes.
+
+1. **Stage, not a box.** Put the diagram on a teal-black floor (`#010E13` to `#02171E`) with a radial mint glow, an inner glow edge, a 9 degree `rotateX` tilt, faint scanlines and a slow sweeping band (`.hud-stage`, `.hud-tilt`, `.hud-scan`).
+2. **Hairlines, not borders.** Nodes use 1.2 px strokes in their source colour. Hover raises the stroke to 2 px and adds a coloured glow. No 4 px frames.
+3. **Colour codes the source.** OT is Data Blue 500, IT is Data Blue 700, ET and existing systems are Data Purple 400, future scope is Data Orange 200, live signal is Data Turquoise 400. One hue per meaning, always with a text label.
+4. **Flow, not arrows.** Connect nodes with curved paths. Animate dashes (`stroke-dashoffset`) and send small packets along each path with `animateMotion`. Idle edges are 16% white.
+5. **Mono for machine text.** Courier New for node labels, protocol names and readouts, uppercase with letter spacing. Arial stays for headings and body.
+6. **HUD furniture.** Corner brackets, a pulsing live dot, and small readouts in the stage corners (`LIVE · 3 SOURCES`, `LAYER 01 / 03`). Keep to three readouts.
+7. **Hover focus.** Hovering a node dims everything not on its path to 20% and brightens its flow. Layer cards on the left are glass panels with a colour-coded left edge that glow when active.
+8. **Glow budget.** Glow marks what is live or selected. If everything glows, nothing does.
+
+Keep the no scroll bar, hover, entrance and reduced-motion rules from the HTML slides section. Respect `prefers-reduced-motion` by stopping the sweep, the dash flow and the pulse.
